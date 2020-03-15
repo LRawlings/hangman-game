@@ -19,31 +19,51 @@ func main() {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	refreshScreen(99)
-	fmt.Print("PLAYER 1\nEnter the secret word: ")
-	word, _ = reader.ReadString('\n')
-	word = strings.TrimSuffix(word, "\r\n")
-	word = strings.ToLower(word)
+	for word == "" {
+		refreshScreen(99)
+		fmt.Print("PLAYER 1\nEnter the secret word: ")
+		word, _ = reader.ReadString('\n')
+		word = strings.TrimSuffix(word, "\r\n")
+		word = strings.ToLower(word)
+		if !checkGuessBlank(word) {
+			word = ""
+		}
+		if !checkGuessAlpha(word) {
+			word = ""
+		}
+	}
 
-	for range word {
-		clue += "_"
+	for i := range word {
+		if string(word[i]) == " " {
+			clue += "  "
+		} else {
+			clue += "_"
+		}
 	}
 
 	refreshScreen(wrongGuesses)
 	for !winner && !loser && curGuess != "exit" {
-		player2Question(prevGuesses, clue, curGuess, "", wrongGuesses)
+		player2Question(prevGuesses, clue, curGuess, "What's your guess? ", wrongGuesses)
 		curGuess = readCurGuess(curGuess, reader)
 
 		if curGuess != "exit" {
-			for !checkGuessLength(curGuess) || !checkGuessPrevious(curGuess, prevGuesses) {
+			for !checkGuessLength(curGuess) || !checkGuessPrevious(curGuess, prevGuesses) || !checkGuessAlpha(curGuess) {
 				switch {
+				case curGuess == "exit":
+				case !checkGuessBlank(curGuess):
+					player2Question(prevGuesses, clue, curGuess, "You've entered a blank guess! Try again: ", wrongGuesses)
+					curGuess = readCurGuess(curGuess, reader)
 				case !checkGuessLength(curGuess):
 					player2Question(prevGuesses, clue, curGuess, "You've entered too many letters! Try again: ", wrongGuesses)
+					curGuess = readCurGuess(curGuess, reader)
 				case !checkGuessPrevious(curGuess, prevGuesses):
 					player2Question(prevGuesses, clue, curGuess, "You've already guessed this letter! Try again: ", wrongGuesses)
-				default:
+					curGuess = readCurGuess(curGuess, reader)
+				case !checkGuessAlpha(curGuess):
+					player2Question(prevGuesses, clue, curGuess, "That's not a letter! Try again: ", wrongGuesses)
+					curGuess = readCurGuess(curGuess, reader)
 				}
-				curGuess = readCurGuess(curGuess, reader)
+
 			}
 			prevGuesses = append(prevGuesses, curGuess)
 			if letterCheck(curGuess, word) {
@@ -56,7 +76,8 @@ func main() {
 			}
 		}
 		refreshScreen(wrongGuesses)
-		if winner {
+		if curGuess == "exit" {
+		} else if winner {
 			fmt.Printf("PLAYER 2\nHere are your guesses so far: %q \n \n %s \n \n", prevGuesses, buildPrintClue(clue))
 			fmt.Printf("Number of incorrect guesses so far: %d\n", wrongGuesses)
 			fmt.Print(`
@@ -117,6 +138,13 @@ func updateClue(letter, clue, word string) string {
 	return newClue
 }
 
+func checkGuessBlank(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	return true
+}
+
 func checkGuessLength(s string) bool {
 	if len(s) != 1 {
 		return false
@@ -129,6 +157,14 @@ func checkGuessPrevious(s string, p []string) bool {
 		if p[i] == s {
 			return false
 		}
+	}
+	return true
+}
+
+func checkGuessAlpha(s string) bool {
+
+	if s < "a" || s > "z" {
+		return false
 	}
 	return true
 }
